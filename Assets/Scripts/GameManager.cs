@@ -123,8 +123,8 @@ public class GameManager : MonoBehaviour
     {
         invader.gameObject.SetActive(false);
         Debug.Log($"Invader {invader.name} killed!");
+        playerAgent.OnLaserHitInvader();
         SetScore(score + invader.score);
-
         if (invaders.GetAliveCount() == 0)
         {
             NewRound();

@@ -4,6 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider2D))]
 public class Projectile : MonoBehaviour
 {
+    private bool hitSomething = false; // Indica si el láser impactó algo
     private BoxCollider2D boxCollider;
     public Vector3 direction = Vector3.up;
     public float speed = 20f;
@@ -21,6 +22,7 @@ public class Projectile : MonoBehaviour
         Vector3 viewportPosition = Camera.main.WorldToViewportPoint(transform.position);
         if (viewportPosition.y < 0 || viewportPosition.y > 1)
         {
+            NotifyMiss(); // Notifica que falló
             Destroy(gameObject);
         }
     }
@@ -42,17 +44,31 @@ public class Projectile : MonoBehaviour
 
         if (bunker != null && bunker.CheckCollision(boxCollider, transform.position))
         {
+            hitSomething = true;
             GameManager.Instance.OnBunkerHit();
             Destroy(gameObject);
         }
         else if (invader != null)
         {
+            hitSomething = true;
             GameManager.Instance.OnInvaderKilled(invader);
             Destroy(gameObject);
         }
         else
         {
             Destroy(gameObject);
+        }
+    }
+    private void OnDestroy()
+    {
+        if (!hitSomething) NotifyMiss();
+    }
+    private void NotifyMiss()
+    {
+        PlayerAgent agent = FindObjectOfType<PlayerAgent>();
+        if (agent != null)
+        {
+            agent.OnLaserMissed();
         }
     }
 }

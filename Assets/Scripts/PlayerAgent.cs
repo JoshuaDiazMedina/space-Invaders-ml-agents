@@ -14,6 +14,15 @@ public class PlayerAgent : Agent
 
     public override void OnEpisodeBegin()
     {
+        if (Academy.Instance.IsCommunicatorOn)
+        {
+            Time.timeScale = 0.8f; // Ralentiza durante el entrenamiento
+        }
+        else
+        {
+            Time.timeScale = 1.0f; // Velocidad normal en inferencia
+        }
+
         Projectile[] activeProjectiles = FindObjectsOfType<Projectile>();
         foreach (Projectile projectile in activeProjectiles)
         {
@@ -35,43 +44,55 @@ public class PlayerAgent : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        // Posición del jugador normalizada
+        // Posición del jugador (1)
         sensor.AddObservation(transform.position.x / Camera.main.orthographicSize);
 
-        // Estado del láser (1: activo, 0: no activo)
+        // Estado del láser (1)
         sensor.AddObservation(laser != null ? 1.0f : 0.0f);
 
-        // Posición de los invasores
+        // Posiciones de los invasores (hasta un máximo de 55)
+        int maxInvaders = 55;
+        int invaderCount = 0;
         foreach (Transform invader in GameManager.Instance.invaders.transform)
         {
             if (invader.gameObject.activeSelf)
             {
                 sensor.AddObservation(invader.position.x / Camera.main.orthographicSize);
                 sensor.AddObservation(invader.position.y / Camera.main.orthographicSize);
+                invaderCount++;
             }
         }
 
-        // Detectar los cuatro misiles más cercanos
+        // Rellenar con ceros si hay menos de 55 invasores
+        for (int i = invaderCount; i < maxInvaders; i++)
+        {
+            sensor.AddObservation(0.0f); // Posición X
+            sensor.AddObservation(0.0f); // Posición Y
+        }
+
+        // Posiciones de los misiles más cercanos (hasta 4)
         Projectile[] activeMissiles = FindObjectsOfType<Projectile>();
         var closestMissiles = activeMissiles
             .Where(m => m.gameObject.layer == LayerMask.NameToLayer("Missile"))
             .OrderBy(m => Vector2.Distance(transform.position, m.transform.position))
             .Take(4);
 
+        int missileCount = 0;
         foreach (var missile in closestMissiles)
         {
             sensor.AddObservation(missile.transform.position.x / Camera.main.orthographicSize);
             sensor.AddObservation(missile.transform.position.y / Camera.main.orthographicSize);
+            missileCount++;
         }
 
-        // Rellenar observaciones faltantes si hay menos de 4 misiles
-        int missingMissiles = 4 - closestMissiles.Count();
-        for (int i = 0; i < missingMissiles; i++)
+        // Rellenar con ceros si hay menos de 4 misiles
+        for (int i = missileCount; i < 4; i++)
         {
-            sensor.AddObservation(0.0f); // Posición X vacía
-            sensor.AddObservation(0.0f); // Posición Y vacía
+            sensor.AddObservation(0.0f); // Posición X
+            sensor.AddObservation(0.0f); // Posición Y
         }
     }
+
 
     public override void OnActionReceived(ActionBuffers actions)
     {
@@ -86,8 +107,7 @@ public class PlayerAgent : Agent
 
         transform.position = position;
 
-        // Disparar láser si la acción discreta lo indica
-        if (laser == null && actions.DiscreteActions[0] == 1)
+        if (laser == null)
         {
             laser = Instantiate(laserPrefab, transform.position, Quaternion.identity);
         }
@@ -107,6 +127,7 @@ public class PlayerAgent : Agent
         if (other.gameObject.layer == LayerMask.NameToLayer("Missile") ||
             other.gameObject.layer == LayerMask.NameToLayer("Invader"))
         {
+            //Debug.Log("Lo matan, penaliza");
             AddReward(-1.0f);
             EndEpisode();
         }
@@ -114,11 +135,18 @@ public class PlayerAgent : Agent
 
     public void OnLaserHitInvader()
     {
+        //Debug.Log("Dispara a Invader, recompenza");
         AddReward(10.0f);
     }
 
     public void OnLaserHitBunker()
     {
-        AddReward(-0.5f); // Penalización por destruir un bunker
+        Debug.Log("Dispara a bunker, penaliza");
+        AddReward(-1.0f); // Penalización por destruir un bunker
+    }
+    public void OnLaserMissed()
+    {
+        //Debug.Log("Disparo fallado, penaliza");
+        AddReward(-1.0f); // Penalización por disparar sin impactar un invasor
     }
 }
