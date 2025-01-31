@@ -1629,10 +1629,6 @@ MonoBehaviour:
   MaxStep: 15000
   speed: 5
   laserPrefab: {fileID: 33052392596605686, guid: 8cca1da190961a842b34231aade647ef, type: 3}
-  bunker1: {fileID: 1001845995}
-  bunker2: {fileID: 1613135759}
-  bunker3: {fileID: 643406835}
-  bunker4: {fileID: 1660341574}
 --- !u!114 &1639391303
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1669,7 +1665,7 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 0}
+  m_Model: {fileID: 5022602860645237092, guid: 6588a75c328b4f846afdf9052f0219db, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 1
   m_BehaviorName: PlayerBehaviour

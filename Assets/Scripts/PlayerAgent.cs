@@ -74,9 +74,16 @@ public class PlayerAgent : Agent
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        float moveInput = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f);
+        //float moveInput = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f);
+        float moveInput = actions.ContinuousActions[0];
+        UnityEngine.Debug.Log(actions.ContinuousActions[0]);
         Vector3 position = transform.position;
+
+        // Guardar posición anterior en X
+        float previousX = position.x;
+
         position.x += moveInput * speed * Time.deltaTime;
+
 
         // Limitar movimiento a los bordes de la pantalla
         Vector3 leftEdge = Camera.main.ViewportToWorldPoint(Vector3.zero);
@@ -85,6 +92,8 @@ public class PlayerAgent : Agent
 
         transform.position = position;
 
+        float distanceMoved = Mathf.Abs(position.x - previousX);
+        AddReward(distanceMoved * 0.01f); // Aumentar recompensa si se mueve más
 
         if (laser == null && actions.DiscreteActions[0] == 1) 
         {
@@ -101,6 +110,7 @@ public class PlayerAgent : Agent
 
         continuousActions[0] = Input.GetAxis("Horizontal");
         discreteActions[0] = Input.GetKey(KeyCode.Space) ? 1 : 0;
+        UnityEngine.Debug.Log("Manual Reward: " + GetCumulativeReward());
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -109,8 +119,14 @@ public class PlayerAgent : Agent
             other.gameObject.layer == LayerMask.NameToLayer("Invader"))
         {
             UnityEngine.Debug.Log("Me cayó un misil");
-            SetReward(-1.0f);
-            GameManager.Instance.OnPlayerKilled(this);
+            AddReward(-0.3f);
+            if (Academy.Instance.IsCommunicatorOn)
+            {
+                EndEpisode();
+            }
+            else {
+                GameManager.Instance.OnPlayerKilled(this);
+            }
             //EndEpisode();
         }
     }
@@ -121,22 +137,30 @@ public class PlayerAgent : Agent
 
     public void OnLaserHitBunker()
     {
-        AddReward(-0.3f); // Penalización por destruir un bunker
+        AddReward(-0.1f); // Penalización por destruir un bunker
     }
     public void OnLaserMissed()
     {
         UnityEngine.Debug.Log("Laser perdido");
-        AddReward(-0.01f); // Penalización por disparar sin impactar un invasor
+        AddReward(-0.005f); // Penalización por disparar sin impactar un invasor
     }
     public void OnHitAllInvader() 
     {
         UnityEngine.Debug.Log("Terminé con todos los invaders");
-        SetReward(1f);
+        AddReward(1f);
+        EndEpisode();
     }
     public void OnInvaderAtHome()
     {
         UnityEngine.Debug.Log("Pierdo una vida, invaders en casa");
-        SetReward(-1f);
-        GameManager.Instance.OnPlayerKilled(this);
+        AddReward(-0.3f);
+        if (Academy.Instance.IsCommunicatorOn)
+        {
+            EndEpisode();
+        }
+        else
+        {
+            GameManager.Instance.OnPlayerKilled(this);
+        }
     }
 }

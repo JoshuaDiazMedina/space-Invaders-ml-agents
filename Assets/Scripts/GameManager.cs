@@ -108,22 +108,15 @@ public class GameManager : MonoBehaviour
     {
         SetLives(lives - 1);
         player.gameObject.SetActive(false);
-
-        if (Academy.Instance.IsCommunicatorOn)
+        if (lives > 0)
         {
-            playerAgent.EndEpisode();
+            Invoke(nameof(NewRound), 1f);
         }
         else
-        {
-            if (lives > 0)
-            {
-                Invoke(nameof(NewRound), 1f);
-            }
-            else
-            { 
-                GameOver();
-            }
+        { 
+            GameOver();
         }
+       
 
         /*if (lives > 0)
         {
@@ -153,7 +146,6 @@ public class GameManager : MonoBehaviour
             if (Academy.Instance.IsCommunicatorOn)
             {
                 playerAgent.OnHitAllInvader();
-                playerAgent.EndEpisode();
             }
             else {
                 NewRound();
@@ -172,7 +164,6 @@ public class GameManager : MonoBehaviour
         {
             invaders.gameObject.SetActive(false);
             playerAgent.OnInvaderAtHome();
-            ; OnPlayerKilled(playerAgent);
         }
     }
 
