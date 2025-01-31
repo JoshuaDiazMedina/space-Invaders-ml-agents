@@ -1,13 +1,14 @@
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
 public class Projectile : MonoBehaviour
 {
-    private bool hitSomething = false; // Indica si el láser impactó algo
     private BoxCollider2D boxCollider;
     public Vector3 direction = Vector3.up;
     public float speed = 20f;
+    public GameObject shooter;
 
     private void Awake()
     {
@@ -20,9 +21,14 @@ public class Projectile : MonoBehaviour
 
         // Destruir si está fuera de los límites de la pantalla
         Vector3 viewportPosition = Camera.main.WorldToViewportPoint(transform.position);
-        if (viewportPosition.y < 0 || viewportPosition.y > 1)
+        if (viewportPosition.y > 1)
         {
-            NotifyMiss(); // Notifica que falló
+            PlayerAgent player = shooter.GetComponent<PlayerAgent>();
+            player.OnLaserMissed();
+            Destroy(gameObject);
+        }
+        else if (viewportPosition.y < 0)
+        {
             Destroy(gameObject);
         }
     }
@@ -41,34 +47,23 @@ public class Projectile : MonoBehaviour
     {
         Bunker bunker = other.gameObject.GetComponent<Bunker>();
         Invader invader = other.gameObject.GetComponent<Invader>();
-
+        PlayerAgent agent = other.gameObject.GetComponent<PlayerAgent>();
         if (bunker != null && bunker.CheckCollision(boxCollider, transform.position))
         {
-            hitSomething = true;
-            GameManager.Instance.OnBunkerHit();
+            if (transform.position.y > bunker.transform.position.y)
+            {
+                // hacer algo para el caso adicional de misil enemigo a bunker
+            }
+            else
+            {
+                GameManager.Instance.OnBunkerHit();
+            }
             Destroy(gameObject);
         }
         else if (invader != null)
         {
-            hitSomething = true;
             GameManager.Instance.OnInvaderKilled(invader);
             Destroy(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-    private void OnDestroy()
-    {
-        if (!hitSomething) NotifyMiss();
-    }
-    private void NotifyMiss()
-    {
-        PlayerAgent agent = FindObjectOfType<PlayerAgent>();
-        if (agent != null)
-        {
-            agent.OnLaserMissed();
         }
     }
 }

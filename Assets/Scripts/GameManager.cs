@@ -1,3 +1,4 @@
+using Unity.MLAgents;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -89,7 +90,6 @@ public class GameManager : MonoBehaviour
     {
         gameOverUI.SetActive(true);
         invaders.gameObject.SetActive(false);
-        playerAgent.EndEpisode();
     }
 
     public void SetScore(int score)
@@ -109,25 +109,55 @@ public class GameManager : MonoBehaviour
         SetLives(lives - 1);
         player.gameObject.SetActive(false);
 
-        if (lives > 0)
+        if (Academy.Instance.IsCommunicatorOn)
+        {
+            playerAgent.EndEpisode();
+        }
+        else
+        {
+            if (lives > 0)
+            {
+                Invoke(nameof(NewRound), 1f);
+            }
+            else
+            { 
+                GameOver();
+            }
+        }
+
+        /*if (lives > 0)
         {
             Invoke(nameof(NewRound), 1f);
         }
         else
         {
-            GameOver();
-        }
+            if (Academy.Instance.IsCommunicatorOn)
+            {
+                playerAgent.OnInvaderAtHome();
+                playerAgent.EndEpisode();
+            }
+            else
+            {
+                GameOver();
+            }
+        }*/
     }
 
     public void OnInvaderKilled(Invader invader)
     {
         invader.gameObject.SetActive(false);
-        Debug.Log($"Invader {invader.name} killed!");
         playerAgent.OnLaserHitInvader();
         SetScore(score + invader.score);
         if (invaders.GetAliveCount() == 0)
         {
-            NewRound();
+            if (Academy.Instance.IsCommunicatorOn)
+            {
+                playerAgent.OnHitAllInvader();
+                playerAgent.EndEpisode();
+            }
+            else {
+                NewRound();
+            }
         }
     }
 
@@ -141,7 +171,8 @@ public class GameManager : MonoBehaviour
         if (invaders.gameObject.activeSelf)
         {
             invaders.gameObject.SetActive(false);
-            OnPlayerKilled(playerAgent);
+            playerAgent.OnInvaderAtHome();
+            ; OnPlayerKilled(playerAgent);
         }
     }
 

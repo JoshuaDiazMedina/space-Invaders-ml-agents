@@ -3,6 +3,7 @@ using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
 using Unity.MLAgents.Actuators;
 using System.Linq;
+using System.Diagnostics;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
@@ -11,18 +12,18 @@ public class PlayerAgent : Agent
     public float speed = 10f;
     public Projectile laserPrefab;
     private Projectile laser;
-
     public override void OnEpisodeBegin()
     {
         if (Academy.Instance.IsCommunicatorOn)
         {
-            Time.timeScale = 0.8f; // Ralentiza durante el entrenamiento
+            Time.timeScale = 0.9f; // Ralentiza durante el entrenamiento
         }
         else
         {
             Time.timeScale = 1.0f; // Velocidad normal en inferencia
         }
 
+        //Destruir cualquier misil activo al momento de empezar episodios
         Projectile[] activeProjectiles = FindObjectsOfType<Projectile>();
         foreach (Projectile projectile in activeProjectiles)
         {
@@ -31,46 +32,20 @@ public class PlayerAgent : Agent
                 Destroy(projectile.gameObject);
             }
         }
-        // Resetear posición del jugador
-        Vector3 startPosition = new Vector3(0, transform.position.y, 0);
-        transform.position = startPosition;
-
-        // Destruir láser existente
+        // Destruir láser existente antes de empezar episodios
         if (laser != null) Destroy(laser.gameObject);
-
+  
         // Reiniciar el entorno
         GameManager.Instance.NewRound();
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        // Posición del jugador (1)
+        // Posición de la nave (2)
         sensor.AddObservation(transform.position.x / Camera.main.orthographicSize);
+        sensor.AddObservation(transform.position.y / Camera.main.orthographicSize);
 
-        // Estado del láser (1)
-        sensor.AddObservation(laser != null ? 1.0f : 0.0f);
-
-        // Posiciones de los invasores (hasta un máximo de 55)
-        int maxInvaders = 55;
-        int invaderCount = 0;
-        foreach (Transform invader in GameManager.Instance.invaders.transform)
-        {
-            if (invader.gameObject.activeSelf)
-            {
-                sensor.AddObservation(invader.position.x / Camera.main.orthographicSize);
-                sensor.AddObservation(invader.position.y / Camera.main.orthographicSize);
-                invaderCount++;
-            }
-        }
-
-        // Rellenar con ceros si hay menos de 55 invasores
-        for (int i = invaderCount; i < maxInvaders; i++)
-        {
-            sensor.AddObservation(0.0f); // Posición X
-            sensor.AddObservation(0.0f); // Posición Y
-        }
-
-        // Posiciones de los misiles más cercanos (hasta 4)
+        // Información de los misiles más cercanos (hasta 4)
         Projectile[] activeMissiles = FindObjectsOfType<Projectile>();
         var closestMissiles = activeMissiles
             .Where(m => m.gameObject.layer == LayerMask.NameToLayer("Missile"))
@@ -80,6 +55,7 @@ public class PlayerAgent : Agent
         int missileCount = 0;
         foreach (var missile in closestMissiles)
         {
+            // Posición del misil (2)
             sensor.AddObservation(missile.transform.position.x / Camera.main.orthographicSize);
             sensor.AddObservation(missile.transform.position.y / Camera.main.orthographicSize);
             missileCount++;
@@ -89,9 +65,11 @@ public class PlayerAgent : Agent
         for (int i = missileCount; i < 4; i++)
         {
             sensor.AddObservation(0.0f); // Posición X
-            sensor.AddObservation(0.0f); // Posición Y
+            sensor.AddObservation(Camera.main.orthographicSize/2); // Posición Y
         }
+        //idealmente deberian ir las posiciones de los bunkers y manejar el comportamiento con los rewards cuando la nave dispare
     }
+
 
 
     public override void OnActionReceived(ActionBuffers actions)
@@ -107,12 +85,15 @@ public class PlayerAgent : Agent
 
         transform.position = position;
 
-        if (laser == null)
+
+        if (laser == null && actions.DiscreteActions[0] == 1) 
         {
             laser = Instantiate(laserPrefab, transform.position, Quaternion.identity);
+            laser.shooter = this.gameObject;
         }
     }
 
+   
     public override void Heuristic(in ActionBuffers actionsOut)
     {
         var continuousActions = actionsOut.ContinuousActions;
@@ -127,26 +108,35 @@ public class PlayerAgent : Agent
         if (other.gameObject.layer == LayerMask.NameToLayer("Missile") ||
             other.gameObject.layer == LayerMask.NameToLayer("Invader"))
         {
-            //Debug.Log("Lo matan, penaliza");
-            AddReward(-1.0f);
-            EndEpisode();
+            UnityEngine.Debug.Log("Me cayó un misil");
+            SetReward(-1.0f);
+            GameManager.Instance.OnPlayerKilled(this);
+            //EndEpisode();
         }
     }
-
     public void OnLaserHitInvader()
     {
-        //Debug.Log("Dispara a Invader, recompenza");
-        AddReward(10.0f);
+        AddReward(0.018f); //Recompensa por disparar a un invader y destruirlo
     }
 
     public void OnLaserHitBunker()
     {
-        Debug.Log("Dispara a bunker, penaliza");
-        AddReward(-1.0f); // Penalización por destruir un bunker
+        AddReward(-0.3f); // Penalización por destruir un bunker
     }
     public void OnLaserMissed()
     {
-        //Debug.Log("Disparo fallado, penaliza");
-        AddReward(-1.0f); // Penalización por disparar sin impactar un invasor
+        UnityEngine.Debug.Log("Laser perdido");
+        AddReward(-0.01f); // Penalización por disparar sin impactar un invasor
+    }
+    public void OnHitAllInvader() 
+    {
+        UnityEngine.Debug.Log("Terminé con todos los invaders");
+        SetReward(1f);
+    }
+    public void OnInvaderAtHome()
+    {
+        UnityEngine.Debug.Log("Pierdo una vida, invaders en casa");
+        SetReward(-1f);
+        GameManager.Instance.OnPlayerKilled(this);
     }
 }

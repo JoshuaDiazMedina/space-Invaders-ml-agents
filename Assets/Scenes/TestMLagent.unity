@@ -432,7 +432,7 @@ GameObject:
   - component: {fileID: 643406838}
   - component: {fileID: 643406839}
   m_Layer: 13
-  m_Name: Bunker
+  m_Name: Bunker_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -770,7 +770,7 @@ GameObject:
   - component: {fileID: 1001845998}
   - component: {fileID: 1001845999}
   m_Layer: 13
-  m_Name: Bunker
+  m_Name: Bunker_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1319,7 +1319,7 @@ GameObject:
   - component: {fileID: 1613135762}
   - component: {fileID: 1613135763}
   m_Layer: 13
-  m_Name: Bunker
+  m_Name: Bunker_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1626,9 +1626,13 @@ MonoBehaviour:
   agentParameters:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
-  MaxStep: 10000
+  MaxStep: 15000
   speed: 5
   laserPrefab: {fileID: 33052392596605686, guid: 8cca1da190961a842b34231aade647ef, type: 3}
+  bunker1: {fileID: 1001845995}
+  bunker2: {fileID: 1613135759}
+  bunker3: {fileID: 643406835}
+  bunker4: {fileID: 1660341574}
 --- !u!114 &1639391303
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1656,7 +1660,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 120
+    VectorObservationSize: 10
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 1
@@ -1667,7 +1671,7 @@ MonoBehaviour:
     hasUpgradedBrainParametersWithActionSpec: 1
   m_Model: {fileID: 0}
   m_InferenceDevice: 0
-  m_BehaviorType: 0
+  m_BehaviorType: 1
   m_BehaviorName: PlayerBehaviour
   TeamId: 0
   m_UseChildSensors: 1
@@ -1686,7 +1690,7 @@ GameObject:
   - component: {fileID: 1660341577}
   - component: {fileID: 1660341578}
   m_Layer: 13
-  m_Name: Bunker
+  m_Name: Bunker_4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
