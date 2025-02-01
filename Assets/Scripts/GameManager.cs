@@ -2,6 +2,7 @@ using Unity.MLAgents;
 using UnityEngine;
 using UnityEngine.UI;
 
+
 [DefaultExecutionOrder(-1)]
 public class GameManager : MonoBehaviour
 {
@@ -10,7 +11,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject gameOverUI;
     [SerializeField] private Text scoreText;
     [SerializeField] private Text livesText;
-
     private PlayerAgent playerAgent;
     public Invaders invaders { get; private set; }
     private MysteryShip mysteryShip;
@@ -81,7 +81,8 @@ public class GameManager : MonoBehaviour
     private void Respawn()
     {
         Vector3 position = playerAgent.transform.position;
-        position.x = 0f;
+        float numeroAleatorio = Random.Range(-12.0f, 12.0f);
+        position.x = numeroAleatorio;
         playerAgent.transform.position = position;
         playerAgent.gameObject.SetActive(true);
     }
