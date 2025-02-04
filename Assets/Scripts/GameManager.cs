@@ -8,6 +8,7 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    [SerializeField] private GameObject playerWinUI;
     [SerializeField] private GameObject gameOverUI;
     [SerializeField] private Text scoreText;
     [SerializeField] private Text livesText;
@@ -51,7 +52,7 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (lives <= 0 && Input.GetKeyDown(KeyCode.Return))
+        if (Input.GetKeyDown(KeyCode.Return) && (lives <= 0 || invaders.GetAliveCount() == 0))
         {
             NewGame();
         }
@@ -60,6 +61,7 @@ public class GameManager : MonoBehaviour
     public void NewGame()
     {
         gameOverUI.SetActive(false);
+        playerWinUI.SetActive(false);
         SetScore(0);
         SetLives(3);
         NewRound();
@@ -85,6 +87,13 @@ public class GameManager : MonoBehaviour
         position.x = numeroAleatorio;
         playerAgent.transform.position = position;
         playerAgent.gameObject.SetActive(true);
+    }
+
+    private void PlayerWin()
+    {
+        invaders.gameObject.SetActive(false);
+        playerWinUI.SetActive(true);
+        
     }
 
     private void GameOver()
@@ -117,24 +126,6 @@ public class GameManager : MonoBehaviour
         { 
             GameOver();
         }
-       
-
-        /*if (lives > 0)
-        {
-            Invoke(nameof(NewRound), 1f);
-        }
-        else
-        {
-            if (Academy.Instance.IsCommunicatorOn)
-            {
-                playerAgent.OnInvaderAtHome();
-                playerAgent.EndEpisode();
-            }
-            else
-            {
-                GameOver();
-            }
-        }*/
     }
 
     public void OnInvaderKilled(Invader invader)
@@ -149,7 +140,7 @@ public class GameManager : MonoBehaviour
                 playerAgent.OnHitAllInvader();
             }
             else {
-                NewRound();
+                PlayerWin();
             }
         }
     }
@@ -157,6 +148,8 @@ public class GameManager : MonoBehaviour
     public void OnMysteryShipKilled(MysteryShip mysteryShip)
     {
         SetScore(score + mysteryShip.score);
+        playerAgent.OnMysteryShipKilledReward();
+
     }
 
     public void OnBoundaryReached()

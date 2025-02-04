@@ -52,12 +52,20 @@ public class PlayerAgent : Agent
             sensor.AddObservation(bunker.transform.position.x / Camera.main.orthographicSize);
             sensor.AddObservation(bunker.transform.position.y / Camera.main.orthographicSize);
         }
-        // Información de los misiles más cercanos (hasta 4)
+
+        Invader[] invaders = FindObjectsOfType<Invader>();
+        foreach (Invader invader in invaders)
+        {
+            // Posición del bunker (110)
+            sensor.AddObservation(invader.transform.position.x / Camera.main.orthographicSize);
+            sensor.AddObservation(invader.transform.position.y / Camera.main.orthographicSize);
+        }
+        // Información de los misiles más cercanos (hasta 1)
         Projectile[] activeMissiles = FindObjectsOfType<Projectile>();
         var closestMissiles = activeMissiles
             .Where(m => m.gameObject.layer == LayerMask.NameToLayer("Missile"))
             .OrderBy(m => Vector2.Distance(transform.position, m.transform.position))
-            .Take(4);
+            .Take(1);
 
         int missileCount = 0;
         foreach (var missile in closestMissiles)
@@ -67,13 +75,15 @@ public class PlayerAgent : Agent
             sensor.AddObservation(missile.transform.position.y / Camera.main.orthographicSize);
             missileCount++;
         }
-
-        // Rellenar con ceros si hay menos de 4 misiles
-        for (int i = missileCount; i < 4; i++)
+        MysteryShip[] mysteryShips = FindObjectsOfType<MysteryShip>();
+        foreach (var mystery in mysteryShips)
         {
-            sensor.AddObservation(0.0f); // Posición X
-            sensor.AddObservation(Camera.main.orthographicSize / 2); // Posición Y
+            // Posición del misil (2)
+            sensor.AddObservation(mystery.transform.position.x / Camera.main.orthographicSize);
+            sensor.AddObservation(mystery.transform.position.y / Camera.main.orthographicSize);
         }
+
+
         //idealmente deberian ir las posiciones de los bunkers y manejar el comportamiento con los rewards cuando la nave dispare
     }
 
@@ -81,9 +91,9 @@ public class PlayerAgent : Agent
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        //float moveInput = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f);
-        float moveInput = actions.ContinuousActions[0];
-        UnityEngine.Debug.Log(actions.ContinuousActions[0]);
+        float moveInput = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f);
+        //float moveInput = actions.ContinuousActions[0];
+        //UnityEngine.Debug.Log(actions.ContinuousActions[0]);
         Vector3 position = transform.position;
 
         // Guardar posición anterior en X
@@ -99,12 +109,26 @@ public class PlayerAgent : Agent
         transform.position = position;
 
         float distanceMoved = Mathf.Abs(position.x - previousX);
-        AddReward(distanceMoved * 0.03f); // Aumentar recompensa si se mueve más
-
+        if (distanceMoved == 0)
+        {
+            AddReward(-0.03f); // Aumentar recompensa si se mueve más
+        }
         if (laser == null && actions.DiscreteActions[0] == 1)
         {
             laser = Instantiate(laserPrefab, transform.position, Quaternion.identity);
             laser.shooter = this.gameObject;
+        }
+        Projectile[] activeMissil = FindObjectsOfType<Projectile>();
+        var closestMissil = activeMissil
+            .Where(m => m.gameObject.layer == LayerMask.NameToLayer("Missile"))
+            .OrderBy(m => Vector2.Distance(transform.position, m.transform.position))
+            .Take(1);
+        foreach (var missile in closestMissil)
+        {
+            if (Mathf.Abs(missile.transform.position.x - transform.position.x) <= 1)
+            {
+                AddReward(-0.1f);
+            }
         }
     }
 
@@ -168,5 +192,10 @@ public class PlayerAgent : Agent
         {
             GameManager.Instance.OnPlayerKilled(this);
         }
+    }
+
+    public void OnMysteryShipKilledReward()
+    {
+        AddReward(0.1f);
     }
 }
