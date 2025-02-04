@@ -1863,9 +1863,9 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: 2988f244bb4750241a17b44c4fdbf737, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: 687d5f6fdb65249c7ab5fa725a2d4880, type: 3}
   m_InferenceDevice: 0
-  m_BehaviorType: 1
+  m_BehaviorType: 2
   m_BehaviorName: PlayerBehaviour
   TeamId: 0
   m_UseChildSensors: 1
@@ -1883,8 +1883,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4cb3f6b77bf7baa468138ba0a0025b6a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  model1: {fileID: 5022602860645237092, guid: 0580753d8a05c964280a39a2fafeaa7d, type: 3}
-  model2: {fileID: 5022602860645237092, guid: 815f40b2dee8f4243a0e2688905f8c26, type: 3}
+  model1: {fileID: 5022602860645237092, guid: 687d5f6fdb65249c7ab5fa725a2d4880, type: 3}
+  model2: {fileID: 5022602860645237092, guid: 0580753d8a05c964280a39a2fafeaa7d, type: 3}
   colorForModel1: {r: 0, g: 1, b: 0, a: 1}
   colorForModel2: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &1660341574
