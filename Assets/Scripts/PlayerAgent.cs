@@ -5,25 +5,45 @@ using Unity.MLAgents.Actuators;
 using System.Linq;
 using System.Diagnostics;
 
+/// <summary>
+/// Represents a Player Agent controlled by ML-Agents.
+/// The agent can move horizontally, shoot lasers, and interact with invaders, bunkers, and missiles.
+/// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
 public class PlayerAgent : Agent
 {
+    /// <summary>
+    /// Movement speed of the player.
+    /// </summary>
     public float speed = 10f;
+
+    /// <summary>
+    /// Prefab of the laser projectile.
+    /// </summary>
     public Projectile laserPrefab;
+
+    /// <summary>
+    /// Active laser projectile.
+    /// </summary>
     private Projectile laser;
+
+    /// <summary>
+    /// Called at the beginning of an episode to reset the environment.
+    /// </summary>
     public override void OnEpisodeBegin()
     {
+        // Adjust time scale depending on training or inference.
         if (Academy.Instance.IsCommunicatorOn)
         {
-            Time.timeScale = 0.9f; // Ralentiza durante el entrenamiento
+            Time.timeScale = 0.9f; // Slower during training
         }
         else
         {
-            Time.timeScale = 1.0f; // Velocidad normal en inferencia
+            Time.timeScale = 1.0f; // Normal speed during inference
         }
 
-        //Destruir cualquier misil activo al momento de empezar episodios
+        // Destroy all active missiles at the start of an episode.
         Projectile[] activeProjectiles = FindObjectsOfType<Projectile>();
         foreach (Projectile projectile in activeProjectiles)
         {
@@ -32,97 +52,108 @@ public class PlayerAgent : Agent
                 Destroy(projectile.gameObject);
             }
         }
-        // Destruir láser existente antes de empezar episodios
+
+        // Destroy active laser if it exists.
         if (laser != null) Destroy(laser.gameObject);
 
-        // Reiniciar el entorno
+        // Reset the game round.
         GameManager.Instance.NewRound();
     }
 
+    /// <summary>
+    /// Collects observations for the ML-Agent.
+    /// Adds positional data of the player, bunkers, invaders, and missiles to the observation vector.
+    /// </summary>
+    /// <param name="sensor">The VectorSensor to store observations.</param>
     public override void CollectObservations(VectorSensor sensor)
     {
-        // Posición de la nave (2)
+        // Player position (normalized).
         sensor.AddObservation(transform.position.x / Camera.main.orthographicSize);
         sensor.AddObservation(transform.position.y / Camera.main.orthographicSize);
 
+        // Add positions of all bunkers.
         Bunker[] bunkers = FindObjectsOfType<Bunker>();
         foreach (Bunker bunker in bunkers)
         {
-            // Posición del bunker (8)
             sensor.AddObservation(bunker.transform.position.x / Camera.main.orthographicSize);
             sensor.AddObservation(bunker.transform.position.y / Camera.main.orthographicSize);
         }
 
+        // Add positions of all invaders.
         Invader[] invaders = FindObjectsOfType<Invader>();
         foreach (Invader invader in invaders)
         {
-            // Posición del bunker (110)
             sensor.AddObservation(invader.transform.position.x / Camera.main.orthographicSize);
             sensor.AddObservation(invader.transform.position.y / Camera.main.orthographicSize);
         }
-        // Información de los misiles más cercanos (hasta 1)
+
+        // Add position of the closest missile.
         Projectile[] activeMissiles = FindObjectsOfType<Projectile>();
         var closestMissiles = activeMissiles
             .Where(m => m.gameObject.layer == LayerMask.NameToLayer("Missile"))
             .OrderBy(m => Vector2.Distance(transform.position, m.transform.position))
             .Take(1);
 
-        int missileCount = 0;
         foreach (var missile in closestMissiles)
         {
-            // Posición del misil (2)
             sensor.AddObservation(missile.transform.position.x / Camera.main.orthographicSize);
             sensor.AddObservation(missile.transform.position.y / Camera.main.orthographicSize);
-            missileCount++;
         }
+
+        // Add positions of mystery ships.
         MysteryShip[] mysteryShips = FindObjectsOfType<MysteryShip>();
         foreach (var mystery in mysteryShips)
         {
-            // Posición del misil (2)
             sensor.AddObservation(mystery.transform.position.x / Camera.main.orthographicSize);
             sensor.AddObservation(mystery.transform.position.y / Camera.main.orthographicSize);
         }
-
-
-        //idealmente deberian ir las posiciones de los bunkers y manejar el comportamiento con los rewards cuando la nave dispare
     }
 
-
-
+    /// <summary>
+    /// Processes the actions decided by the ML-Agent and updates the player's behavior.
+    /// </summary>
+    /// <param name="actions">The actions chosen by the agent.</param>
     public override void OnActionReceived(ActionBuffers actions)
     {
+        // Read horizontal movement input.
         float moveInput = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f);
-        //float moveInput = actions.ContinuousActions[0];
-        //UnityEngine.Debug.Log(actions.ContinuousActions[0]);
         Vector3 position = transform.position;
 
-        // Guardar posición anterior en X
+        // Save previous X position.
         float previousX = position.x;
 
+        // Update position based on input.
         position.x += moveInput * speed * Time.deltaTime;
 
-        // Limitar movimiento a los bordes de la pantalla
+        // Clamp position within screen boundaries.
         Vector3 leftEdge = Camera.main.ViewportToWorldPoint(Vector3.zero);
         Vector3 rightEdge = Camera.main.ViewportToWorldPoint(Vector3.right);
         position.x = Mathf.Clamp(position.x, leftEdge.x, rightEdge.x);
 
+        // Apply position update.
         transform.position = position;
 
+        // Penalize if no movement occurred.
         float distanceMoved = Mathf.Abs(position.x - previousX);
         if (distanceMoved == 0)
         {
-            AddReward(-0.03f); // Aumentar recompensa si se mueve más
+            AddReward(-0.03f);
         }
+
+        // Handle laser firing.
         if (laser == null && actions.DiscreteActions[0] == 1)
         {
             laser = Instantiate(laserPrefab, transform.position, Quaternion.identity);
             laser.shooter = this.gameObject;
         }
+
+        // Penalize proximity to missiles.
         Projectile[] activeMissil = FindObjectsOfType<Projectile>();
         var closestMissil = activeMissil
             .Where(m => m.gameObject.layer == LayerMask.NameToLayer("Missile"))
             .OrderBy(m => Vector2.Distance(transform.position, m.transform.position))
             .Take(1);
+
         foreach (var missile in closestMissil)
         {
             if (Mathf.Abs(missile.transform.position.x - transform.position.x) <= 1)
@@ -132,6 +163,10 @@ public class PlayerAgent : Agent
         }
     }
 
+    /// <summary>
+    /// Provides manual control for debugging and testing.
+    /// </summary>
+    /// <param name="actionsOut">Output action buffer for manual input.</param>
     public override void Heuristic(in ActionBuffers actionsOut)
     {
         var continuousActions = actionsOut.ContinuousActions;
@@ -142,12 +177,16 @@ public class PlayerAgent : Agent
         UnityEngine.Debug.Log("Manual Reward: " + GetCumulativeReward());
     }
 
+    /// <summary>
+    /// Handles collision events with missiles and invaders.
+    /// </summary>
+    /// <param name="other">The collider that triggered the event.</param>
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.gameObject.layer == LayerMask.NameToLayer("Missile") ||
             other.gameObject.layer == LayerMask.NameToLayer("Invader"))
         {
-            UnityEngine.Debug.Log("Me cayó un misil");
+            UnityEngine.Debug.Log("Hit by a missile or invader.");
             SetReward(-1f);
             if (Academy.Instance.IsCommunicatorOn)
             {
@@ -157,32 +196,50 @@ public class PlayerAgent : Agent
             {
                 GameManager.Instance.OnPlayerKilled(this);
             }
-            //EndEpisode();
         }
     }
+
+    /// <summary>
+    /// Adds a reward for hitting an invader with a laser.
+    /// </summary>
     public void OnLaserHitInvader()
     {
-        AddReward(0.018f); //Recompensa por disparar a un invader y destruirlo
+        AddReward(0.018f);
     }
 
+    /// <summary>
+    /// Penalizes for hitting a bunker with a laser.
+    /// </summary>
     public void OnLaserHitBunker()
     {
-        AddReward(-0.01f); // Penalización por destruir un bunker
+        AddReward(-0.01f);
     }
+
+    /// <summary>
+    /// Penalizes for missing with a laser shot.
+    /// </summary>
     public void OnLaserMissed()
     {
-        UnityEngine.Debug.Log("Laser perdido");
-        AddReward(-0.05f); // Penalización por disparar sin impactar un invasor
+        UnityEngine.Debug.Log("Missed laser shot.");
+        AddReward(-0.05f);
     }
+
+    /// <summary>
+    /// Rewards for destroying all invaders.
+    /// </summary>
     public void OnHitAllInvader()
     {
-        UnityEngine.Debug.Log("Terminé con todos los invaders");
+        UnityEngine.Debug.Log("Destroyed all invaders.");
         SetReward(1f);
         EndEpisode();
     }
+
+    /// <summary>
+    /// Penalizes for allowing an invader to reach the home base.
+    /// </summary>
     public void OnInvaderAtHome()
     {
-        UnityEngine.Debug.Log("Pierdo una vida, invaders en casa");
+        UnityEngine.Debug.Log("Invaders reached home base.");
         SetReward(-1f);
         if (Academy.Instance.IsCommunicatorOn)
         {
@@ -194,6 +251,9 @@ public class PlayerAgent : Agent
         }
     }
 
+    /// <summary>
+    /// Rewards for destroying a mystery ship.
+    /// </summary>
     public void OnMysteryShipKilledReward()
     {
         AddReward(0.1f);

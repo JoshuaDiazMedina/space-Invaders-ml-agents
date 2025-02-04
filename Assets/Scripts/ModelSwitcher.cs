@@ -2,33 +2,60 @@ using UnityEngine;
 using Unity.MLAgents.Policies;
 using Unity.Barracuda;
 
+/// <summary>
+/// A script to dynamically switch between two NN models at runtime.
+/// This script changes the model and updates the GameObject's appearance 
+/// (color) to reflect the currently active model.
+/// </summary>
 public class ModelSwitcher : MonoBehaviour
 {
-    public NNModel model1; // Primer modelo ONNX
-    public NNModel model2; // Segundo modelo ONNX
+    /// <summary>
+    /// The first ONNX model to be used by the agent.
+    /// </summary>
+    public NNModel model1;
 
-    public Color colorForModel1 = Color.green; // Color para el modelo 1
-    public Color colorForModel2 = Color.red;   // Color para el modelo 2
+    /// <summary>
+    /// The second ONNX model to be used by the agent.
+    /// </summary>
+    public NNModel model2;
 
-    private BehaviorParameters behaviorParameters;
-    private SpriteRenderer spriteRenderer;
-    private bool usingModel1 = true;
+    /// <summary>
+    /// The color applied to the sprite when using the first model.
+    /// </summary>
+    public Color colorForModel1 = Color.green;
 
+    /// <summary>
+    /// The color applied to the sprite when using the second model.
+    /// </summary>
+    public Color colorForModel2 = Color.red;
+
+    private BehaviorParameters behaviorParameters; ///< Reference to the BehaviorParameters component.
+    private SpriteRenderer spriteRenderer; ///< Reference to the SpriteRenderer component.
+    private bool usingModel1 = true; ///< Tracks whether the first model is currently active.
+
+    /// <summary>
+    /// Initializes the script by setting the first model and color as active.
+    /// </summary>
     void Start()
     {
         behaviorParameters = GetComponent<BehaviorParameters>();
         spriteRenderer = GetComponent<SpriteRenderer>();
 
-        // Inicialmente usa el primer modelo y color
+        // Use the first model and color by default.
         behaviorParameters.Model = model1;
         spriteRenderer.color = colorForModel1;
     }
 
+    /// <summary>
+    /// Checks for input to switch the active model and updates the agent's appearance accordingly.
+    /// </summary>
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.M)) // Cambia el modelo al presionar "M"
+        // Switch models when the "M" key is pressed.
+        if (Input.GetKeyDown(KeyCode.M))
         {
             usingModel1 = !usingModel1;
+
             if (usingModel1)
             {
                 behaviorParameters.Model = model1;
@@ -40,7 +67,7 @@ public class ModelSwitcher : MonoBehaviour
                 spriteRenderer.color = colorForModel2;
             }
 
-            Debug.Log("Modelo cambiado a: " + behaviorParameters.Model.name);
+            Debug.Log("Model switched to: " + behaviorParameters.Model.name);
         }
     }
 }
