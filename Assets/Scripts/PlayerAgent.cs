@@ -4,6 +4,8 @@ using Unity.MLAgents.Sensors;
 using Unity.MLAgents.Actuators;
 using System.Linq;
 using System.Diagnostics;
+using Unity.Barracuda;
+using UnityEditor.Timeline.Actions;
 
 /// <summary>
 /// Represents a Player Agent controlled by ML-Agents.
@@ -162,6 +164,52 @@ public class PlayerAgent : Agent
             }
         }
     }
+
+
+    // Call decision request by events
+
+    private void Update()
+    {
+        // También puedes agregar eventos en Update()
+
+        /*float  NaveXpos =  (transform.position.x);
+        UnityEngine.Debug.Log("Nave x:"+ NaveXpos);
+        Bunker[] bunkers = FindObjectsOfType<Bunker>();
+        foreach (Bunker bunker in bunkers)
+        {
+            if (Mathf.Abs(NaveXpos - (bunker.transform.position.x)) <= 1) {
+                UnityEngine.Debug.Log("Decision requester for bunker");
+                RequestDecision();
+            }
+        }
+
+        Invader[] invaders = FindObjectsOfType<Invader>();
+        foreach (Invader invader in invaders)
+        {
+            if (Mathf.Abs(NaveXpos - (invader.transform.position.x)) <= 0.6)
+            {
+                UnityEngine.Debug.Log("Decision requester for invader");
+                RequestDecision();
+            }
+        }*/
+        float NaveXpos = (transform.position.x);
+        // Add position of the closest missile.
+        Projectile[] activeMissiles = FindObjectsOfType<Projectile>();
+        var closestMissiles = activeMissiles
+            .Where(m => m.gameObject.layer == LayerMask.NameToLayer("Missile"))
+            .Take(1);
+        foreach (var missile in closestMissiles)
+        {
+            if (Mathf.Abs(NaveXpos - (missile.transform.position.x)) <= 0.5)
+            {
+                UnityEngine.Debug.Log("Decision requester for missile");
+                RequestDecision();
+            }
+        }
+    }
+
+
+
 
     /// <summary>
     /// Provides manual control for debugging and testing.
